@@ -455,10 +455,11 @@ void JPEGCODEC::Decode(DcmPixelData^ oldPixelData, DcmPixelData^ newPixelData, D
 	else
 		newPixelData->PhotometricInterpretation = oldPixelData->PhotometricInterpretation;
 
-	if (params->ConvertColorspaceToRGB && (dinfo.out_color_space == JCS_YCbCr || dinfo.out_color_space == JCS_RGB)) { 
+	if (params->ConvertColorspaceToRGB && oldPixelData->SamplesPerPixel == 3) { 
 		if (oldPixelData->IsSigned) 
 			throw gcnew DicomCodecException("JPEG codec unable to perform colorspace conversion on signed pixel data");
-		dinfo.jpeg_color_space = IJGVERS::getJpegColorSpace(oldPixelData->PhotometricInterpretation);
+		//dinfo.jpeg_color_space = IJGVERS::getJpegColorSpace(oldPixelData->PhotometricInterpretation);
+		dinfo.jpeg_color_space = JCS_YCbCr;
 		dinfo.out_color_space = JCS_RGB;
 		newPixelData->PhotometricInterpretation = "RGB";
 		newPixelData->PlanarConfiguration = 0;
@@ -483,7 +484,7 @@ void JPEGCODEC::Decode(DcmPixelData^ oldPixelData, DcmPixelData^ newPixelData, D
 	unsigned char* framePtr = framePin;
 
 	while (dinfo.output_scanline < dinfo.output_height) {
-		int rows = jpeg_read_scanlines(&dinfo, (JSAMPARRAY)&framePtr, dinfo.output_height - dinfo.output_scanline);
+		int rows = jpeg_read_scanlines(&dinfo, (JSAMPARRAY)&framePtr, 1);
 		framePtr += rows * rowSize;
 	}
 
