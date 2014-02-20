@@ -455,11 +455,11 @@ void JPEGCODEC::Decode(DcmPixelData^ oldPixelData, DcmPixelData^ newPixelData, D
 	else
 		newPixelData->PhotometricInterpretation = oldPixelData->PhotometricInterpretation;
 
-	if (params->ConvertColorspaceToRGB && oldPixelData->SamplesPerPixel == 3) { 
+	if (params->ConvertColorspaceToRGB && (dinfo.out_color_space == JCS_YCbCr || dinfo.out_color_space == JCS_RGB)) { 
 		if (oldPixelData->IsSigned) 
 			throw gcnew DicomCodecException("JPEG codec unable to perform colorspace conversion on signed pixel data");
 		//dinfo.jpeg_color_space = IJGVERS::getJpegColorSpace(oldPixelData->PhotometricInterpretation);
-		dinfo.jpeg_color_space = JCS_YCbCr;
+		//dinfo.jpeg_color_space = JCS_YCbCr;
 		dinfo.out_color_space = JCS_RGB;
 		newPixelData->PhotometricInterpretation = "RGB";
 		newPixelData->PlanarConfiguration = 0;
