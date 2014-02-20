@@ -119,12 +119,10 @@ namespace Dicom.Data
             if (_hasPixelPadding)
             {
                 DcmElement elem = dataset.GetElement(DicomTags.PixelPaddingValue);
-                if (elem is DcmUnsignedShort)
+                if (elem is DcmUnsignedShort && elem.GetVM() > 0)
                     _pixelPaddingValue = (elem as DcmUnsignedShort).GetValue();
-                else if (elem is DcmSignedShort)
-                {
+				else if (elem is DcmSignedShort && elem.GetVM() > 0)
                     _pixelPaddingValue = (elem as DcmSignedShort).GetValue();
-                }
                 else
                     _pixelPaddingValue = MinimumDataValue;
             }
