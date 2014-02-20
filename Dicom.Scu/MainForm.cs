@@ -254,7 +254,7 @@ namespace Dicom.Scu {
 			SaveConfig();
 
 			CStoreClient scu = new CStoreClient();
-			scu.DisableFileStreaming = true;
+			scu.DisableFileStreaming = false;
 			scu.CallingAE = Config.LocalAE;
 			scu.CalledAE = Config.RemoteAE;
 			scu.MaxPduSize = Config.MaxPdu;
@@ -262,6 +262,7 @@ namespace Dicom.Scu {
 			scu.SocketTimeout = Config.Timeout;
 			scu.DimseTimeout = Config.Timeout;
 			scu.SerializedPresentationContexts = true;
+			scu.UseFileBuffer = true;
 			scu.PreferredTransferSyntax = TransferSyntaxes[Config.TransferSyntax];
 
 			//if (scu.PreferredTransferSyntax == DicomTransferSyntax.JPEGProcess1 ||
