@@ -13,7 +13,10 @@ namespace Dicom.Data {
 		And,
 
 		/// <summary>Any rule matches</summary>
-		Or
+		Or,
+
+		/// <summary>No rules match</summary>
+		None
 	}
 
 	public interface IDicomMatchRule {
@@ -67,8 +70,13 @@ namespace Dicom.Data {
 						return true;
 
 				return false;
-			}
-			else {
+			} else if (_operator == DicomMatchOperator.None) {
+				foreach (IDicomMatchRule rule in _rules)
+					if (rule.Match(dataset))
+						return false;
+
+				return true;
+			} else {
 				foreach (IDicomMatchRule rule in _rules)
 					if (!rule.Match(dataset))
 						return false;
