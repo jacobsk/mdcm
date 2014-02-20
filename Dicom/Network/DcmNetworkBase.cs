@@ -144,6 +144,7 @@ namespace Dicom.Network {
 		private bool _disableTimeout;
 		private bool _isRunning;
 		private bool _useFileBuffer;
+		private bool _reloadFromFile;
 		private bool _enableStreamParse;
 		private string _logid = "SCU";
 		private Logger _log;
@@ -241,6 +242,17 @@ namespace Dicom.Network {
 			set { _useFileBuffer = value; }
 		}
 
+		public bool ReloadFromFile {
+			get { return _reloadFromFile; }
+			set {
+				_reloadFromFile = value;
+				if (_reloadFromFile) {
+					UseFileBuffer = true;
+					//EnableStreamParse = false;
+				}
+			}
+		}
+
 		public bool EnableStreamParse {
 			get { return _enableStreamParse; }
 			set { _enableStreamParse = value; }
@@ -254,6 +266,11 @@ namespace Dicom.Network {
 		public Logger Log {
 			get { return _log; }
 			set { _log = value; }
+		}
+
+		public static bool UseRemoteAeForLogName {
+			get;
+			set;
 		}
 		#endregion
 
@@ -501,6 +518,10 @@ namespace Dicom.Network {
 		/// <param name="associate"></param>
 		protected void SendAssociateRequest(DcmAssociate associate) {
 			_assoc = associate;
+			if (UseRemoteAeForLogName) {
+				LogID = Associate.CalledAE;
+				Log = LogManager.GetLogger(LogID);
+			}
 			Log.Info("{0} -> Association request:\n{1}", LogID, Associate.ToString());
 			AAssociateRQ pdu = new AAssociateRQ(_assoc);
 			SendRawPDU(pdu.Write());
@@ -1120,6 +1141,10 @@ namespace Dicom.Network {
 						_assoc = new DcmAssociate();
 						AAssociateRQ pdu = new AAssociateRQ(_assoc);
 						pdu.Read(raw);
+						if (UseRemoteAeForLogName) {
+							LogID = Associate.CallingAE;
+							Log = LogManager.GetLogger(LogID);
+						}
 						Log.Info("{0} <- Association request:\n{1}", LogID, Associate.ToString());
 						OnReceiveAssociateRequest(_assoc);
 						return true;
@@ -1275,6 +1300,10 @@ namespace Dicom.Network {
 							_dimse.DatasetData.AddChunk(pdv.Value);
 						}
 
+						_dimse.Progress.BytesTransfered += pdv.Value.Length;
+						if (!EnableStreamParse)
+							_dimse.Progress.EstimatedDatasetLength += pdv.Value.Length;
+
 						if (_dimse.Dataset == null) {
 							DicomTransferSyntax ts = _assoc.GetAcceptedTransferSyntax(pdv.PCID);
 							_dimse.Dataset = new DcmDataset(ts);
@@ -1286,13 +1315,10 @@ namespace Dicom.Network {
 									// DicomStreamReader needs a seekable stream
 									MemoryStream ms = StreamUtility.Deflate(_dimse.DatasetStream, false);
 									_dimse.DatasetReader = new DicomStreamReader(ms);
-								}
-								else
+								} else
 									_dimse.DatasetReader = new DicomStreamReader(_dimse.DatasetStream);
 								_dimse.DatasetReader.Dataset = _dimse.Dataset;
 							}
-
-							_dimse.Progress.BytesTransfered += pdv.Value.Length;
 
 							long remaining = _dimse.DatasetReader.BytesRemaining + pdv.Value.Length;
 							if (remaining >= _dimse.DatasetReader.BytesNeeded || pdv.IsLastFragment) {
@@ -1306,6 +1332,13 @@ namespace Dicom.Network {
 
 						if (pdv.IsLastFragment) {
 							_dimse.Close();
+
+							if (ReloadFromFile && !String.IsNullOrEmpty(_dimse.DatasetFile)) {
+								DicomFileFormat ff = new DicomFileFormat();
+								ff.Load(_dimse.DatasetFile, DicomReadOptions.DefaultWithoutDeferredLoading);
+
+								_dimse.Dataset = ff.Dataset;
+							}
 
 							if (_dimse.IsNewDimse)
 								OnReceiveDimseBegin(pcid, _dimse.Command, _dimse.Dataset, _dimse.Progress);
